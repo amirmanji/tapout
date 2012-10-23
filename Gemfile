@@ -4,7 +4,7 @@ gem 'rails', '3.2.8'
 gem 'jquery-rails'
 gem 'haml-rails'
 gem 'pry-rails'
-gem 'sqlite3'
+gem 'mysql2'
 
 gem 'foreman'
 gem 'thin'
