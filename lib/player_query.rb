@@ -1,3 +1,5 @@
+require_dependency 'player_results'
+
 class PlayerQuery
   attr_accessor :player, :query
   attr_reader :join
@@ -9,23 +11,19 @@ class PlayerQuery
   end
 
   def execute
-    Player.find_by_sql self.to_sql
+    if single_record?
+      Player.find_by_sql(to_sql).first
+    else
+      PlayerResults.new(to_sql)
+    end
   end
 
-  def to_sql
-    query.to_sql
+  def single_record?
+    query.ast.limit.present? && query.ast.limit.value == 1
   end
 
-  def count_matches
-    query.project matches[:match_id].count.as('appearances'),
-                  matches[:winner].sum.as('wins')
-    return self
-  end
-
-  def count_opposing
-    query.project opposing[:match_id].count.as('appearances'),
-                  opposing[:winner].sum.as('wins')
-    return self
+  def multi_record?
+    query.ast.limit.nil? || query.ast.limit.value > 1
   end
 
   def with_matches(&blk)
@@ -42,11 +40,28 @@ class PlayerQuery
     return self
   end
 
-  def count_query
-    submatch = arel_table(:match_players)
-    subquery = submatch.where submatch[:match_id].eq(matches[:match_id])
-    subquery.project submatch[:match_id].count
-    Arel::SqlLiteral.new("(#{subquery.to_sql})")
+  def count_matches
+    query.project matches[:match_id].count.as('appearances'),
+                  matches[:winner].sum.as('wins'),
+                  Arel::SqlLiteral.new("(SUM(`matches`.`winner`) / COUNT(`matches`.`match_id`))").as('ratio')
+    return self
+  end
+
+  def count_opposing
+    query.project opposing[:match_id].count.as('appearances'),
+                  opposing[:winner].sum.as('wins'),
+                  Arel::SqlLiteral.new("(SUM(`opposing`.`winner`) / COUNT(`opposing`.`match_id`))").as('ratio')
+    return self
+  end
+
+  def singles
+    query.where count_query.eq(2)
+    return self
+  end
+
+  def teams
+    query.where count_query.gt(2)
+    return self
   end
 
   def players
@@ -62,13 +77,25 @@ class PlayerQuery
   end
 
   def method_missing(*args)
-    query.send(*args)
-    return self
+    result = query.send(*args)
+
+    if [:to_dot, :to_sql].include?(args.first)
+      result
+    else
+      self
+    end
   end
 
   private
   def arel_table(name)
     Arel::Table.new(name)
+  end
+
+  def count_query
+    submatch = arel_table(:match_players)
+    subquery = submatch.where submatch[:match_id].eq(matches[:match_id])
+    subquery.project submatch[:match_id].count
+    Arel::SqlLiteral.new("(#{subquery.to_sql})")
   end
 
   class <<self
@@ -102,12 +129,36 @@ class PlayerQuery
       }
     end
 
+    def best_opponent_for(player)
+      opponents_for(player).order('ratio DESC').take(1)
+    end
+
+    def worst_opponent_for(player)
+      opponents_for(player).order('ratio ASC').take(1)
+    end
+
     def singles_opponents_for(player)
       opponents_for(player).singles
     end
 
+    def best_singles_opponent_for(player)
+      singles_opponents_for(player).order('ratio DESC').take(1)
+    end
+
+    def worst_singles_opponent_for(player)
+      singles_opponents_for(player).order('ratio ASC').take(1)
+    end
+
     def team_opponents_for(player)
       opponents_for(player).teams
+    end
+
+    def best_team_opponent_for(player)
+      team_opponents_for(player).order('ratio DESC').take(1)
+    end
+
+    def worst_team_opponent_for(player)
+      team_opponents_for(player).order('ratio ASC').take(1)
     end
 
     def partners_for(player)
@@ -116,6 +167,38 @@ class PlayerQuery
                 opposing[:player_id].eq(player.id),
                 opposing[:team].eq(matches[:team])
       }
+    end
+
+    def best_partner_for(player)
+      partners_for(player).order('ratio DESC').take(1)
+    end
+
+    def worst_partner_for(player)
+      partners_for(player).order('ratio ASC').take(1)
+    end
+
+    def singles_partners_for(player)
+      partners_for(player).singles
+    end
+
+    def best_singles_partner_for(player)
+      singles_partners_for(player).order('ratio DESC').take(1)
+    end
+
+    def worst_singles_partner_for(player)
+      singles_partners_for(player).order('ratio ASC').take(1)
+    end
+
+    def team_partners_for(player)
+      partners_for(player).teams
+    end
+
+    def best_team_partner_for(player)
+      team_partners_for(player).order('ratio DESC').take(1)
+    end
+
+    def worst_team_partner_for(player)
+      team_partners_for(player).order('ratio ASC').take(1)
     end
   end
 end
