@@ -7,7 +7,7 @@ Sport.create name: 'Ping Pong', base_points: 1
 end
 
 sport = Sport.first
-1000.times do
+20_000.times do
   match = Match.create! sport: sport
 
   players = 2 * (1 + rand(2))
