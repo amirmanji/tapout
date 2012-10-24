@@ -19,7 +19,7 @@ class PlayerResults
 
     @records.map! do |record|
       # Tap kind of works like yield in this case!
-      Player.allocate.init_with('attributes' => record).tap(&blk)
+      Player.instantiate(record).tap(&blk)
     end
   end
 end
