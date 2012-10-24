@@ -4,5 +4,7 @@ class MatchPlayer < ActiveRecord::Base
 
   validates :winner, inclusion: {in: [true, false]}
   validates :team, numericality: {greater_than: 0}
+
+  scope :won, where(winner: true)
 end
 

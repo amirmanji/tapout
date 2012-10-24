@@ -1,4 +1,6 @@
 class Player < ActiveRecord::Base
+  extend ActiveSupport::Memoizable
+
   has_many :match_players
   has_many :matches, through: :match_players
 
@@ -61,12 +63,14 @@ class Player < ActiveRecord::Base
   end
 
   def appearances
-    read_attribute(:appearances).to_i || 0
+    (read_attribute(:appearances) || match_players.count).to_i
   end
+  memoize :appearances
 
   def wins
-    read_attribute(:wins).to_i || 0
+    (read_attribute(:wins) || match_players.won.count).to_i
   end
+  memoize :wins
 
   def ratio
     if appearances > 0
