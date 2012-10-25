@@ -8,6 +8,8 @@ class Player < ActiveRecord::Base
 
   validates :name, presence: true
 
+  default_scope order('name ASC')
+
   def appearances
     (read_attribute(:appearances) || match_players.count).to_i
   end
