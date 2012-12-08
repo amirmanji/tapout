@@ -1,5 +1,7 @@
 $stdout.sync = true
 
+require 'console_logging'
+
 Tapout::Application.configure do
   # Settings specified here will take precedence over those in config/application.rb
 
@@ -37,3 +39,4 @@ Tapout::Application.configure do
   # Expands the lines which load the assets
   config.assets.debug = true
 end
+

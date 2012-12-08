@@ -1,6 +1,7 @@
 class Match < ActiveRecord::Base
   belongs_to :sport, counter_cache: true
   has_many :match_players
+  has_many :players, through: :match_players
 
   def add_winner(player)
     match_players.create(player: player, winner: true, team: 1)
